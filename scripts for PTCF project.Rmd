@@ -1,0 +1,246 @@
+---
+title: "PTCF project"
+author: "Huanhuan Shi"
+date: "5/9/2022"
+output: 
+    pdf_document
+---
+
+
+```{r,include= FALSE, echo=FALSE,message=FALSE,warning=FALSE}
+###load the packages and  data
+library(dplyr)
+library(psych)
+library(lme4)
+library(ggplot2)
+library(lmerTest)
+library(broom)
+library(broom.mixed)
+library(knitr)
+d <- read.csv("PTCF.csv")
+```
+
+
+
+```{r, include=FALSE,echo=FALSE,message=FALSE,warning=FALSE}
+##age center
+d$AgeCenter<-d$age-mean(d$age)
+head(d)
+summary(d)
+```
+
+```{r,include=FALSE,echo=FALSE,message=FALSE,warning=FALSE}
+#data for priming 
+d_Prime<-d%>%
+  filter(task=="priming")
+d_Story<-d%>%
+  filter(task=="storyretelling")
+head(d_Story)
+d_Spoken<-d%>%
+  filter(modality=="spoken")
+head(d_Spoken)
+d_Written<-d%>%
+  filter(modality=="written")
+```
+
+```{r,include=FALSE,echo=FALSE,message=FALSE,warning=FALSE}
+##get the mean for each condition
+###mean for PrimeOral
+mean_Prime<-mean(d_Prime$accuracy)
+mean_Prime
+
+###mean for PrimeWritten
+mean_Story<-mean(d_Story$accuracy)
+mean_Story
+
+###mean for StorySpoken
+mean_Spoken<-mean(d_Spoken$accuracy)
+mean_Spoken
+
+
+###mean for PrimeOral
+mean_Written<-mean(d_Written$accuracy)
+mean_Written
+```
+
+
+```{r, include=FALSE,echo=FALSE,message=FALSE,warning=FALSE}
+## summarize with group_by task
+d_task<-d %>% 
+  group_by(task) %>%
+  summarize(meanaccuracy=mean(accuracy),
+            N = length(accuracy),
+            mean = mean(accuracy),
+            sd   = sd(accuracy),
+            se   = sd / sqrt(N))
+            
+d_task
+
+```
+
+
+```{r, include=FALSE,echo=FALSE,message=FALSE,warning=FALSE}
+##group by modality
+d_modality<-d %>% 
+  group_by(modality) %>%
+  summarize(meanaccuracy=mean(accuracy),
+            N = length(accuracy),
+            mean = mean(accuracy),
+            sd   = sd(accuracy),
+            se   = sd / sqrt(N))
+
+d_modality
+```
+
+
+```{r,include=FALSE, echo=FALSE,message=FALSE,warning=FALSE}
+# group by condition
+d_condition<-d %>% 
+  group_by(condition) %>%
+  summarize(meanaccuracy=mean(accuracy),
+            N = length(accuracy),
+            mean = mean(accuracy),
+            sd   = sd(accuracy),
+            se   = sd / sqrt(N))
+
+head(d_condition)
+summary(d_condition)
+```
+
+
+
+```{r, include= FALSE,echo=FALSE,message=FALSE,warning=FALSE}
+head(d)
+d$M<-ifelse(d$modality=="spoken",-0.5,0.5)
+d$T<-ifelse(d$task=="priming",-0.5,0.5)
+lm<-glmer(accuracy ~ (1|subject) +(1|picture)+ AgeCenter+ T*M, data=d, family = binomial)
+summary(lm)
+```
+
+```{r coefficiency, include= FALSE, echo=FALSE,message=FALSE,warning=FALSE}
+##get the paprameter in the model
+coeff <- tidy(lm)
+coeff
+```
+**Project Description**
+
+ This project examined how response modality (spoken vs. written) and elicitaton context (prming vs.storyretelling) affected adolescents' production of past tense counterfactual sentences(PTCF). This is an overview of the data.
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+head(d)
+```
+
+This is a summary of the data.
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+summary(d)
+```
+
+
+The descriptive data was presented in Table 1.
+
+```{r tables for all conditions, echo=FALSE,message=FALSE,warning=FALSE}
+kable(d_condition, col.names=c("Conditions","Accuracy","N","mean","sd","se"),align = "cccccc",
+      caption="Table 1. Descriptive data for the four conditions")
+```
+
+Figure 1. presented the same results as Table 1.
+
+```{r,fig.align = 'center',out.width= '80%',fig.cap='Fiture 1. Mean proportion of the canonical PTCF sentences in each condition.', echo=FALSE,message=FALSE,warning=FALSE}
+##with color narrow bar
+ggplot(d_condition, aes(x=condition, y=mean, fill=condition)) + 
+  geom_bar(stat="identity", width = .8) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(.9))+ xlab("Conditions") + ylim(0,1) + ylab("Proportion of canonical PTCF ")+ guides(fill="none")+theme_bw()+ theme(axis.title=element_text(face="bold",size=12),axis.text.x=element_text(face="bold",size=10),axis.text.y=element_text(size=10),strip.text.x=element_text(face="bold",size=12),legend.text=element_text(face="bold",size=15))
+
+
+###no lines in the background
+ggplot(d_condition, aes(x=condition, y=mean, fill=condition)) + 
+  geom_bar(stat="identity", width = 0.8) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.1, position=position_dodge(0.9)) + 
+  xlab("Conditions") + 
+  ylim(0, 1) + 
+  ylab("Proportion of Canonical PTCF Sentences") + 
+  guides(fill="none") + 
+  theme_bw() + 
+  theme(
+    axis.title = element_text(face="bold", size=12),
+    axis.text.x = element_text(face="bold", size=10),
+    axis.text.y = element_text(size=10),
+    strip.text.x = element_text(face="bold", size=12),
+    legend.text = element_text(face="bold", size=15),
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank()   # Remove minor grid lines
+  )
+
+```
+
+**Model output**
+
+We run a binomial mixed-effects regression with task, modality and age as fixed effects and subjects and trials as random effects. There was a main effect of task (*$\beta$* = `r round(coeff[3,4], digits=2)`,*p* < .001).The participants produced significantly more PTCF sentences in the priming tasks (*mean* = `r round(mean_Prime, digits=2)`) than in the story retelling tasks (*mean* = `r round(mean_Story, digits=2)`). See Figure 2.
+
+We also found a main effect of modality (*$\beta$* = `r round(coeff[4,4], digits=2)`,*p* < .001), which revealed that the participants used more PTCF setences in spoken (*mean* = `r round(mean_Spoken, digits=2)`) than in written production (*mean* = `r round(mean_Written, digits=2)`). There was no effect of age (*$\beta$* = `r round(coeff[3,4], digits=2)`,*p* = `r round(coeff[2,7], digits=2)`), and no interaction between task and modality (*$\beta$* = `r round(coeff[5,4], digits=2)`, *p* = `r round(coeff[5,7], digits=2)`). See Figure 3.
+
+
+```{r,fig.align = 'center',out.width= '80%',fig.cap='Mean proportion of canonical PTCF sentences in each task.',echo=FALSE,message=FALSE,warning=FALSE}
+##figure by task
+ggplot(d_task, aes(x=task, y=mean, fill=task)) + 
+  geom_bar(stat="identity", width = .8) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(.9))+ xlab("Tasks") + ylim(0,1) + ylab("Proportion of Canonical PTCF Sentences")+ guides(fill="none")+theme_bw()+ theme(axis.title=element_text(face="bold",size=12),axis.text.x=element_text(face="bold",size=10),axis.text.y=element_text(size=12),strip.text.x=element_text(face="bold",size=10),legend.text=element_text(face="bold",size=12))
+
+
+###no background lines
+p3 <- ggplot(d_task, aes(x=task, y=mean, fill=task)) + 
+  geom_bar(stat="identity", width = 0.6) +  # Made bars even narrower by reducing width
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.1, position=position_dodge(0.9)) + 
+  xlab("Tasks") + 
+  ylim(0, 1) + 
+  ylab("Proportion of Canonical PTCF Sentences") + 
+  guides(fill="none") + 
+  theme_bw() + 
+  theme(
+    axis.title = element_text(face="bold", size=12),
+    axis.title.y = element_text(size=12),  # Make y-axis label font smaller
+    axis.text.x = element_text(face="bold", size=10),
+    axis.text.y = element_text(size=12),
+    strip.text.x = element_text(face="bold", size=12),
+    legend.text = element_text(face="bold", size=12),
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank()   # Remove minor grid lines
+  )
+
+# Save the plot with increased height
+ggsave("Figure3.png", plot = p3, width = 4, height = 4,dpi = 500)
+```
+
+
+```{r,fig.align = 'center',out.width= '80%',fig.cap= 'Mean proportion of canonical PTCF sentences in each modality.', echo=FALSE,message=FALSE,warning=FALSE}
+##figure by modality
+ggplot(d_modality, aes(x=modality, y=mean, fill=modality)) + 
+  geom_bar(stat="identity", width = .8) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.1, position=position_dodge(.9))+ xlab("Modalities") + ylim(0,1) + ylab("Proportion of canonical PTCF ")+ guides(fill="none")+theme_bw()+ theme(axis.title=element_text(face="bold",size=12),axis.text.x=element_text(size=10),axis.text.y=element_text(size=12),strip.text.x=element_text(face="bold",size=10),legend.text=element_text(face="bold",size=12))
+
+
+###no lines in the backgound
+p4 <- ggplot(d_modality, aes(x=modality, y=mean, fill=modality)) + 
+  geom_bar(stat="identity", width = 0.6) +  # Made bars narrower by reducing width
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.1, position=position_dodge(0.9)) + 
+  xlab("Modalities") + 
+  ylim(0, 1) + 
+  ylab("Proportion of Canonical PTCF Sentences") + 
+  guides(fill="none") + 
+  theme_bw() + 
+  theme(
+    axis.title = element_text(face="bold", size=12),
+    axis.text.x = element_text(face="bold", size=10),
+    axis.text.y = element_text(size=12),
+    strip.text.x = element_text(face="bold", size=10),
+    legend.text = element_text(face="bold", size=12),
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank()   # Remove minor grid lines
+  )
+
+# Save the plot with narrower dimensions
+ggsave("Figure4.png", plot = p4, width = 4, height = 4,dpi = 500)
+
+```
+
+
